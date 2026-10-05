@@ -1,7 +1,5 @@
 # Proyecto: Bóveda WiFi - Grupo 21
 
-El repositorio se denomina **`21_BovedaWiFi`**, siguiendo la estructura `NumeroGrupo_TituloProyecto`.
-
 ## Descripción
 
 Bóveda WiFi es un sistema cliente-servidor de escritorio, operado mediante terminal, para transferir archivos de forma segura entre dispositivos conectados a una misma red WiFi local. También permite ejecutar el emisor y el receptor en un solo equipo mediante localhost.
@@ -218,5 +216,3 @@ El emisor debe mostrar:
 Los hashes impresos por ambos procesos deben coincidir. El archivo final se guarda en `recibidos/<identificador>_prueba.txt` y la carpeta `temporales` debe quedar vacía en ambos equipos. El original permanece en el emisor.
 
 Si se pierde la confirmación, revisar la terminal y los archivos del receptor antes de repetir el envío. Detener el receptor con Ctrl+C.
-
-Consultar [Protocolo_de_Implementacion.md](Protocolo_de_Implementacion.md) para los diez pasos de la rúbrica y los detalles del protocolo. La implementación se probó en Linux con Python 3.12.14; la prueba en Windows y entre dos equipos WiFi debe realizarse en el entorno de presentación.

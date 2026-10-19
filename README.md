@@ -2,13 +2,13 @@
 
 ## Descripción
 
-Bóveda WiFi es un sistema cliente-servidor de escritorio, operado mediante terminal, para transferir archivos de forma segura entre dispositivos conectados a una misma red WiFi local. También permite ejecutar el emisor y el receptor en un solo equipo mediante localhost.
+Bóveda WiFi es un sistema cliente-servidor de escritorio con interfaz gráfica y ejecución alternativa mediante terminal, para transferir archivos de forma segura entre dispositivos conectados a una misma red WiFi local. También permite ejecutar el emisor y el receptor en un solo equipo mediante localhost.
 
 La comunicación se realiza directamente mediante TCP/IP y sockets, sin depender de servicios externos de almacenamiento ni servidores en la nube durante la transferencia.
 
 El sistema utiliza AES-256-GCM para cifrar el archivo, RSA-OAEP para proteger la clave AES y SHA-256 para verificar la integridad. Al terminar, elimina las copias temporales generadas por la aplicación y conserva el archivo original y la copia final verificada.
 
-**En esta versión, la autenticación mediante huella dactilar está simulada en terminal. No se captura una huella real ni se requiere un sensor biométrico.**
+**En esta versión, la autenticación mediante huella dactilar está simulada mediante botones en la interfaz gráfica o una opción en terminal. No se captura una huella real ni se requiere un sensor biométrico.**
 
 ## Integrantes - Sección B
 
@@ -21,9 +21,10 @@ El sistema utiliza AES-256-GCM para cifrar el archivo, RSA-OAEP para proteger la
 ## Tecnologías
 
 - Python 3.
+- Tkinter y ttk para la interfaz gráfica de escritorio.
 - WiFi, TCP/IP y sockets IPv4.
 - PyCryptodome 3.23.0: AES-256-GCM y RSA de 3072 bits con OAEP/SHA-256.
-- python-dotenv 1.2.1 para cargar las variables de entorno.
+- python-dotenv 1.0.1 para cargar las variables de entorno, según requirements.txt.
 - SHA-256 para verificar la integridad.
 - Windows / Linux.
 - Visual Studio Code y Wireshark como herramientas opcionales.
@@ -33,12 +34,12 @@ El sistema utiliza AES-256-GCM para cifrar el archivo, RSA-OAEP para proteger la
 - Cifrado del contenido y sus metadatos mediante AES-256-GCM.
 - Protección de la clave AES mediante RSA-OAEP con SHA-256.
 - Verificación de la etiqueta GCM y del hash SHA-256 antes de guardar el archivo final.
-- Simulación biométrica previa al envío.
+- Control de acceso simulado en la interfaz y simulación biométrica previa al envío en terminal.
 - Eliminación automática de copias temporales cifradas.
 - Confirmación cifrada del receptor después de guardar el archivo y limpiar sus temporales.
 - Claves RSA generadas localmente: no se incluyen claves ni credenciales reales en el repositorio.
 
-La simulación biométrica no autentica una identidad real. El borrado de temporales es lógico y no constituye un borrado forense. El archivo final recibido se conserva, sin caducidad automática.
+La simulación biométrica no autentica una identidad real ni al emisor remoto. El borrado de temporales es lógico y no constituye un borrado forense. El archivo final recibido se conserva, sin caducidad automática.
 
 ## Requisitos
 
@@ -54,14 +55,31 @@ El sensor de huella, controlador, cables y fuente de alimentación del diseño o
 
 ### Software
 
-- Windows 11 o Linux.
-- Python 3.10 o superior; recomendado Python 3.12.
+- Windows 11 o Linux con un entorno gráfico para abrir el frontend.
+- Python 3.10 o superior; recomendado Python 3.12 de 64 bits.
 - pip y venv.
+- Tkinter, normalmente incluido en Python para Windows. En Linux puede requerir instalar el paquete correspondiente a la versión de Python utilizada.
 - Git para clonar el repositorio.
-- Dependencias indicadas en `requirements.txt`.
+- Dependencias indicadas en requirements.txt.
 - Visual Studio Code y Wireshark, opcionales.
 
 No se requiere base de datos ni servidor web. El puerto predeterminado es TCP 5001. El límite por archivo es 20 MiB, configurable entre 1 y 100 MiB.
+
+## Archivos principales
+
+| Archivo | Función |
+| --- | --- |
+| frontend.py | Interfaz gráfica: acceso, inicio, envío, recepción, actividad, configuración y ayuda. |
+| emisor.py | Envío seguro, utilizado por la interfaz y por la terminal. |
+| receptor.py | Recepción segura, utilizada por la interfaz y por la terminal. |
+| utils_crypto.py | Criptografía, configuración y protocolo TCP. |
+| requirements.txt | Dependencias del proyecto. |
+| .env.example | Plantilla de configuración local. |
+| .gitignore | Exclusión de claves, configuración local y archivos de trabajo. |
+| iniciar_windows.bat | Iniciador de la interfaz para Windows. |
+| iniciar_linux.sh | Iniciador de la interfaz para Linux. |
+
+frontend.py, emisor.py, receptor.py y utils_crypto.py deben estar en la misma carpeta. Utilizar las versiones de emisor.py y receptor.py adaptadas al frontend. No se necesitan carpetas docs ni tests para ejecutar la aplicación.
 
 ## Instalación
 
@@ -72,47 +90,73 @@ git clone https://github.com/Fernando-hy/21_BovedaWiFi.git
 cd 21_BovedaWiFi
 ```
 
+También puede descargarse el ZIP del repositorio, descomprimirlo y abrir una terminal dentro de la carpeta que contiene frontend.py.
+
 ### 2. Crear y activar un entorno virtual
 
-Windows CMD:
+Windows CMD, con Python 3.12 instalado:
 
 ```bat
-python --version
-python -m venv .venv
+py -3.12 --version
+py -3.12 -m venv .venv
 .venv\Scripts\activate.bat
 ```
 
-Linux Bash:
+Linux Bash, con Python 3.12 instalado:
 
 ```bash
-python3 --version
-python3 -m venv .venv
+python3.12 --version
+python3.12 -m venv .venv
 source .venv/bin/activate
 ```
 
-En los pasos siguientes, ejecutar `python` y `pip` con el entorno virtual activado.
+Si ya existe un entorno compatible, basta con activarlo. Si se creó con una versión antigua de Python, salir con deactivate y renombrar o conservar su carpeta antes de crear el nuevo entorno.
+
+En los pasos siguientes, ejecutar python con el entorno virtual activado. Comprobar la versión utilizada:
+
+```bash
+python --version
+```
 
 ### 3. Instalar las dependencias
 
+Actualizar las herramientas de instalación:
+
 ```bash
-pip install -r requirements.txt
+python -m pip install --upgrade pip setuptools wheel
+```
+
+Instalar las dependencias y verificar su consistencia:
+
+```bash
+python -m pip install --only-binary=pycryptodome -r requirements.txt
 python -m pip check
 ```
 
+La opción --only-binary=pycryptodome solicita una distribución precompilada para esa dependencia. Si no encuentra una compatible, revisar la versión y arquitectura de Python y comprobar que pip esté actualizado. Para esta instalación se recomienda Python 3.12 de 64 bits.
+
+Comprobar las importaciones:
+
+```bash
+python -c "from Crypto.Cipher import AES; import dotenv; import tkinter; print('Dependencias disponibles')"
+```
+
+En Ubuntu/Debian, si falta Tkinter, instalar el paquete python3-tk correspondiente al intérprete utilizado mediante el gestor de paquetes del sistema.
+
 ### 4. Configurar las variables de entorno
 
-En una instalación nueva, renombrar `.env.example` a `.env`. Si ya existe `.env`, conservarlo y revisar su configuración.
+En una instalación nueva, copiar .env.example a .env. Si ya existe .env, conservarlo y revisar su configuración.
 
 Windows CMD:
 
 ```bat
-ren .env.example .env
+if not exist .env copy .env.example .env
 ```
 
 Linux Bash:
 
 ```bash
-mv -n .env.example .env
+[ -f .env ] || cp .env.example .env
 ```
 
 Para una prueba en un solo equipo, mantener:
@@ -127,92 +171,120 @@ DIRECTORIO_RECIBIDOS=recibidos
 DIRECTORIO_TEMPORALES=temporales
 ```
 
-Para dos equipos en la misma WiFi, configurar `HOST` en ambos con la IPv4 privada real del receptor y mantener el mismo puerto. Permitir TCP 5001 en el firewall del receptor para la LAN. La red debe permitir comunicación entre sus dispositivos.
+Para dos equipos en la misma WiFi, configurar HOST en ambos con la IPv4 privada real del receptor y mantener el mismo puerto. Permitir TCP 5001 en el firewall del receptor para la LAN. La red debe permitir comunicación entre sus dispositivos.
 
-Las rutas relativas se resuelven respecto de la carpeta del proyecto. Las variables definidas en el sistema tienen prioridad sobre `.env`.
+Las rutas relativas se resuelven respecto de la carpeta del proyecto. Las variables definidas en el sistema tienen prioridad sobre .env.
 
-### 5. Generar las claves RSA locales
+No subir .env a GitHub; publicar únicamente .env.example. Tampoco subir el entorno virtual, claves, archivos recibidos ni temporales.
 
-Ejecutar únicamente en el receptor:
+### 5. Comprobar la sintaxis
+
+```bash
+python -m py_compile frontend.py utils_crypto.py emisor.py receptor.py
+```
+
+El comando debe finalizar sin errores. Python no requiere una compilación de despliegue previa.
+
+## Ejecución del frontend
+
+### 1. Abrir la interfaz gráfica
+
+Desde la carpeta del proyecto, con el entorno virtual activado:
+
+```bash
+python frontend.py
+```
+
+Después de instalar las dependencias, también puede abrirse mediante iniciar_windows.bat en Windows o mediante el siguiente comando en Linux:
+
+```bash
+bash iniciar_linux.sh
+```
+
+### 2. Acceder al sistema
+
+- Pulsar **Simular huella autorizada** para abrir el panel principal.
+- Pulsar **Simular acceso denegado** para comprobar el bloqueo del acceso.
+
+Esta acción es una simulación; no se verifica una identidad biométrica real.
+
+### 3. Configurar la conexión y las claves
+
+Abrir **Configuración** y revisar la IP del receptor, el puerto, el tiempo de espera y el límite por archivo. Pulsar **Aplicar a la sesión** para utilizar los cambios.
+
+Para una prueba en un solo equipo, usar 127.0.0.1 y el puerto 5001. Pulsar **Generar / comprobar claves del receptor** para preparar el par RSA. Si existe un par válido, se conserva.
+
+Para dos equipos, generar las claves únicamente en el receptor. Copiar solo claves/receptor_publica.pem al emisor por un medio confiable y comparar las huellas SHA-256 de las claves públicas por un canal independiente. La clave privada permanece en el receptor.
+
+Los parámetros modificados en la interfaz duran la sesión actual. Para conservar la configuración al reiniciar, modificar el archivo .env local.
+
+### 4. Iniciar la recepción
+
+En el equipo receptor, abrir **Recibir archivos** y pulsar **Iniciar receptor**. La IP de escucha debe pertenecer a ese equipo. Esperar a que aparezca el estado de escucha.
+
+Cuando se utiliza el receptor desde la interfaz, no iniciar además receptor.py en otra terminal con el mismo puerto.
+
+### 5. Enviar un archivo
+
+En el emisor:
+
+1. Abrir **Enviar archivo**.
+2. Pulsar **Buscar archivo** y seleccionar el archivo.
+3. Revisar el destino y el límite de tamaño.
+4. Pulsar **Cifrar y enviar**.
+5. Esperar el resultado de la operación.
+
+Para localhost, puede iniciarse el receptor y realizarse el envío desde la misma ventana. Entre dos equipos, abrir el frontend en ambos, iniciar la recepción en uno y enviar desde el otro.
+
+### 6. Verificar el resultado
+
+En **Actividad**, seleccionar la operación para consultar su resultado y el hash SHA-256. En una recepción verificada también se muestra la ruta del archivo final.
+
+- **Envío confirmado:** el emisor recibió y validó la confirmación cifrada del receptor.
+- **Recepción verificada:** el archivo se guardó después de validar su integridad, se limpiaron los temporales y se envió la confirmación.
+- **Envío no confirmado:** revisar el motivo y comprobar el receptor antes de repetir, porque podría haber guardado el archivo aunque no llegara la confirmación al emisor.
+
+El original permanece en el emisor y la copia final verificada se conserva en recibidos. El historial se mantiene en memoria y se borra al cerrar la sesión.
+
+### 7. Finalizar
+
+En **Recibir archivos**, pulsar **Detener receptor**. Si existe una transferencia activa, el cierre espera a que termine o venza su tiempo de espera. Esperar también que finalice cualquier envío antes de cerrar la sesión o salir.
+
+## Ejecución alternativa mediante terminal
+
+La interfaz gráfica y los comandos de terminal comparten las funciones de transferencia. Para trabajar por terminal, detener primero el receptor de la interfaz si utiliza el mismo puerto.
+
+### 1. Preparar las claves en el receptor
 
 ```bash
 python utils_crypto.py --generar-claves
 python utils_crypto.py --huella
 ```
 
-Se crean `claves/receptor_privada.pem` y `claves/receptor_publica.pem`. Si existe un par válido, se conserva.
+Se crean claves/receptor_privada.pem y claves/receptor_publica.pem. En dos equipos, copiar solo la pública al emisor y comparar las huellas antes de transferir.
 
-- **Localhost:** los dos procesos utilizan la misma carpeta `claves`.
-- **Dos equipos:** copiar únicamente `receptor_publica.pem` a la carpeta `claves` del emisor por un medio confiable. Ejecutar `python utils_crypto.py --huella` en ambos equipos y comparar sus resultados por un canal independiente. Deben coincidir antes de transferir archivos.
+### 2. Iniciar el receptor
 
-La clave privada permanece en el receptor. No subir `.env`, claves, archivos recibidos ni temporales a GitHub; utilizar el `.gitignore` incluido.
-
-### 6. Comprobar la sintaxis
-
-```bash
-python -m py_compile utils_crypto.py emisor.py receptor.py
-```
-
-El comando debe finalizar sin errores. Python no requiere una compilación de despliegue previa.
-
-## Ejecución
-
-### 1. Iniciar el receptor
-
-En la primera terminal, con el entorno virtual activado:
+En una terminal con el entorno activado:
 
 ```bash
 python receptor.py
 ```
 
-Debe aparecer:
+Debe aparecer el mensaje de escucha con la IP y el puerto configurados. Mantener esa terminal abierta.
 
-```text
-[LISTO] Receptor escuchando en 127.0.0.1:5001
-```
+### 3. Iniciar el emisor
 
-En una prueba LAN, el mensaje mostrará la IP configurada. Mantener esta terminal abierta.
-
-### 2. Iniciar el emisor
-
-Abrir una segunda terminal en la carpeta del proyecto y activar el entorno virtual con el comando correspondiente del paso 2 de instalación. En una prueba LAN, ejecutar esta parte en el equipo emisor.
-
-Crear y enviar un archivo de prueba:
-
-```bash
-python -c "from pathlib import Path; Path('prueba.txt').write_text('Archivo de prueba de Boveda WiFi.\n', encoding='utf-8')"
-python emisor.py prueba.txt
-```
-
-Para enviar otro archivo, indicar su ruta:
+En otra terminal con el entorno activado:
 
 ```bash
 python emisor.py "ruta/al/archivo.pdf"
 ```
 
-### 3. Aprobar la simulación biométrica
+Introducir 1 y Enter para simular una huella autorizada. Cualquier otra entrada deniega el envío.
 
-Cuando aparezca la solicitud en terminal, introducir `1` y Enter para simular una huella autorizada. Introducir `2` o cualquier otra entrada deniega el envío.
+### 4. Verificar y finalizar
 
-### 4. Verificar la transferencia
+Comprobar los mensajes de integridad, guardado, limpieza de temporales y transferencia completada. Los hashes impresos por ambos procesos deben coincidir.
 
-El receptor debe mostrar:
-
-```text
-[OK] AES-256-GCM y SHA-256 verificados.
-[OK] Archivo final guardado: ...
-[OK] Temporales del receptor eliminados.
-[OK] Confirmacion cifrada enviada.
-```
-
-El emisor debe mostrar:
-
-```text
-[OK] Receptor confirmo SHA-256 y limpieza de sus temporales.
-[OK] Temporales del emisor eliminados.
-[OK] Transferencia completada. SHA-256: ...
-```
-
-Los hashes impresos por ambos procesos deben coincidir. El archivo final se guarda en `recibidos/<identificador>_prueba.txt` y la carpeta `temporales` debe quedar vacía en ambos equipos. El original permanece en el emisor.
-
-Si se pierde la confirmación, revisar la terminal y los archivos del receptor antes de repetir el envío. Detener el receptor con Ctrl+C.
+Si se pierde la confirmación, revisar el receptor antes de repetir el envío. Detener el receptor con Ctrl+C.

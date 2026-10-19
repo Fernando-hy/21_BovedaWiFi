@@ -18,8 +18,11 @@ def autenticar_simulacion():
     print("[OK] Autenticacion biometrica SIMULADA aprobada.")
 
 
-def enviar_archivo(ruta, config):
-    autenticar_simulacion()
+def enviar_archivo(ruta, config, autenticar=None, notificar=None):
+    """Comparte el protocolo con terminal y GUI; la GUI aporta su control de acceso."""
+    (autenticar or autenticar_simulacion)()
+    emitir = notificar or (lambda mensaje: None)
+    emitir("Leyendo archivo y clave pública...")
     if not ruta.is_file():
         raise ValueError("La ruta debe corresponder a un archivo existente.")
     with ruta.open("rb") as archivo:
@@ -29,6 +32,7 @@ def enviar_archivo(ruta, config):
     publica = crypto.cargar_rsa(config.claves / "receptor_publica.pem")
     print("Huella publica confiada:", crypto.huella_publica(publica))
     resumen = crypto.sha256(datos)
+    emitir("Conectando con el receptor...")
     with crypto.carpeta_temporal(config, "emisor") as carpeta:
         with socket.create_connection((config.host, config.puerto), config.timeout) as conexion:
             fin = time.monotonic() + config.timeout
@@ -41,6 +45,7 @@ def enviar_archivo(ruta, config):
             protegida = crypto.proteger_clave(clave, publica)
             temporal = carpeta / "envio.cifrado"
             temporal.write_bytes(cifrado)
+            emitir("Archivo cifrado. Enviando y esperando confirmación...")
             print("[OK] Archivo cifrado con AES-256-GCM; clave protegida con RSA-OAEP.")
             crypto.enviar_bloque(conexion, protegida, fin)
             crypto.enviar_bloque(conexion, temporal.read_bytes(), fin)
@@ -50,6 +55,8 @@ def enviar_archivo(ruta, config):
                 raise ValueError("La confirmacion del receptor no coincide.")
             print("[OK] Receptor confirmo SHA-256 y limpieza de sus temporales.")
     print("[OK] Transferencia completada. SHA-256:", resumen)
+    return {"nombre": ruta.name, "bytes": len(datos), "sha256": resumen,
+            "estado": "Envío confirmado", "detalle": "Confirmación cifrada válida. Temporales de ambos extremos eliminados."}
 
 
 def main():

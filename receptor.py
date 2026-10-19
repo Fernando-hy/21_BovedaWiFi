@@ -30,7 +30,7 @@ def guardar_archivo(config, nombre, datos):
     return destino
 
 
-def recibir_archivo(conexion, config, privada):
+def recibir_archivo(conexion, config, privada, notificar=None):
     fin = time.monotonic() + config.timeout
     desafio = crypto.MAGIA + get_random_bytes(32)
     crypto.enviar_bloque(conexion, desafio, fin)
@@ -54,10 +54,16 @@ def recibir_archivo(conexion, config, privada):
     respuesta = crypto.cifrar_aes(b"OK" + bytes.fromhex(calculado), clave, desafio + b"/ACK")
     crypto.enviar_bloque(conexion, respuesta, fin)
     print("[OK] Confirmacion cifrada enviada.")
+    if notificar:
+        notificar("recibido", {"nombre": destino.name, "ruta": str(destino),
+                  "bytes": len(datos), "sha256": calculado, "estado": "Recepción verificada",
+                  "detalle": "Archivo guardado. Integridad y limpieza verificadas; confirmación enviada."})
     return destino
 
 
-def ejecutar(config):
+def ejecutar(config, detener=None, notificar=None):
+    """El cierre solicitado espera la transferencia activa para permitir su limpieza."""
+    emitir = notificar or (lambda tipo, datos: None)
     privada = crypto.cargar_rsa(config.claves / "receptor_privada.pem", privada=True)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as servidor:
         if os.name == "nt" and hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
@@ -69,7 +75,8 @@ def ejecutar(config):
         servidor.settimeout(1)
         print("[LISTO] Receptor escuchando en " + config.host + ":" + str(config.puerto))
         print("Use Ctrl+C para detener el receptor.")
-        while True:
+        emitir("escuchando", config.host + ":" + str(config.puerto))
+        while detener is None or not detener.is_set():
             try:
                 conexion, direccion = servidor.accept()
             except socket.timeout:
@@ -77,9 +84,11 @@ def ejecutar(config):
             with conexion:
                 try:
                     crypto.validar_ip(direccion[0])
-                    recibir_archivo(conexion, config, privada)
+                    emitir("actividad", "Recibiendo desde " + direccion[0])
+                    recibir_archivo(conexion, config, privada, emitir)
                 except (OSError, ValueError, TypeError) as error:
                     print("[ERROR] Transferencia no confirmada:", error)
+                    emitir("error_recepcion", str(error))
 
 
 def main():

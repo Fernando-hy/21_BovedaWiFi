@@ -8,8 +8,6 @@ La comunicación se realiza directamente mediante TCP/IP y sockets, sin depender
 
 El sistema utiliza AES-256-GCM para cifrar el archivo, RSA-OAEP para proteger la clave AES y SHA-256 para verificar la integridad. Al terminar, elimina las copias temporales generadas por la aplicación y conserva el archivo original y la copia final verificada.
 
-**En esta versión, la autenticación mediante huella dactilar está simulada mediante botones en la interfaz gráfica o una opción en terminal. No se captura una huella real ni se requiere un sensor biométrico.**
-
 ## Integrantes - Sección B
 
 - Ccma Palomino, Leao Darwin

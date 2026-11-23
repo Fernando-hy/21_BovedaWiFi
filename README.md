@@ -1,5 +1,14 @@
-# Bóveda WiFi 2.0 · Grupo 21
-Aplicación de escritorio para intercambiar archivos en una LAN privada. Cada laptop tiene una identidad RSA propia, un perfil del sistema y el registro de la clave pública de su único par. Ambas pueden enviar o recibir. Versión basada en https://github.com/Fernando-hy/21_BovedaWiFi (a5c49c773cd3678cff458856f724d3aae32bcc2e). El protocolo BVW2 requiere esta misma versión en ambos extremos.
+# Proyecto: Bóveda WiFi - Grupo 21
+
+## Descripción
+
+Bóveda WiFi es un sistema cliente-servidor de escritorio con interfaz gráfica y ejecución alternativa mediante terminal, para transferir archivos de forma segura entre dispositivos conectados a una misma red WiFi local. También permite ejecutar el emisor y el receptor en un solo equipo mediante localhost.
+
+La comunicación se realiza directamente mediante TCP/IP y sockets, sin depender de servicios externos de almacenamiento ni servidores en la nube durante la transferencia.
+
+El sistema utiliza AES-256-GCM para cifrar el archivo, RSA-OAEP para proteger la clave AES y SHA-256 para verificar la integridad. Al terminar, elimina las copias temporales generadas por la aplicación y conserva el archivo original y la copia final verificada.
+
+**En esta versión, la autenticación mediante huella dactilar está simulada mediante botones en la interfaz gráfica o una opción en terminal. No se captura una huella real ni se requiere un sensor biométrico.**
 
 ## Integrantes - Sección B
 
@@ -55,6 +64,33 @@ El sensor de huella, controlador, cables y fuente de alimentación del diseño o
 - Visual Studio Code y Wireshark, opcionales.
 
 No se requiere base de datos ni servidor web. El puerto predeterminado es TCP 5001. El límite por archivo es 20 MiB, configurable entre 1 y 100 MiB.
+
+## Archivos principales
+
+| Archivo | Función |
+| --- | --- |
+| frontend.py | Interfaz gráfica: acceso, inicio, envío, recepción, actividad, configuración y ayuda. |
+| emisor.py | Envío seguro, utilizado por la interfaz y por la terminal. |
+| receptor.py | Recepción segura, utilizada por la interfaz y por la terminal. |
+| utils_crypto.py | Criptografía, configuración y protocolo TCP. |
+| requirements.txt | Dependencias del proyecto. |
+| .env.example | Plantilla de configuración local. |
+| .gitignore | Exclusión de claves, configuración local y archivos de trabajo. |
+| iniciar_windows.bat | Iniciador de la interfaz para Windows. |
+| iniciar_linux.sh | Iniciador de la interfaz para Linux. |
+
+frontend.py, emisor.py, receptor.py y utils_crypto.py deben estar en la misma carpeta. Utilizar las versiones de emisor.py y receptor.py adaptadas al frontend. No se necesitan carpetas docs ni tests para ejecutar la aplicación.
+
+## Instalación
+
+### 1. Clonar el repositorio
+
+```bash
+git clone https://github.com/Fernando-hy/21_BovedaWiFi.git
+cd 21_BovedaWiFi
+```
+
+También puede descargarse el ZIP del repositorio, descomprimirlo y abrir una terminal dentro de la carpeta que contiene frontend.py.
 
 ## Instalar en cada laptop
 Descomprime en una carpeta privada y con permiso de escritura, fuera de carpetas sincronizadas. Usa Python 3.12 de 64 bits, con Tk. Se necesita Internet para instalar paquetes o una colección local de ruedas compatibles. Durante el uso bastan los dos equipos y una LAN. Usa Windows con escritorio o Linux con sesión gráfica. Los archivos recibidos pueden requerir hasta 100 MiB cada uno; reserva espacio para el original, un temporal y el destino. El contenido se procesa en memoria.

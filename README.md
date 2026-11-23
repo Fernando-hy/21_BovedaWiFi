@@ -1,6 +1,61 @@
 # Bóveda WiFi 2.0 · Grupo 21
 Aplicación de escritorio para intercambiar archivos en una LAN privada. Cada laptop tiene una identidad RSA propia, un perfil del sistema y el registro de la clave pública de su único par. Ambas pueden enviar o recibir. Versión basada en https://github.com/Fernando-hy/21_BovedaWiFi (a5c49c773cd3678cff458856f724d3aae32bcc2e). El protocolo BVW2 requiere esta misma versión en ambos extremos.
 
+## Integrantes - Sección B
+
+- Ccma Palomino, Leao Darwin
+- Hinostroza Yauri, Fernando Jesús
+- Hualpa Arias, Andy Richardson
+- Machaca Orosco, Anthony Jhayr
+- Rivera Carbajal, Rodrigo Yazid
+
+## Tecnologías
+
+- Python 3.
+- Tkinter y ttk para la interfaz gráfica de escritorio.
+- WiFi, TCP/IP y sockets IPv4.
+- PyCryptodome 3.23.0: AES-256-GCM y RSA de 3072 bits con OAEP/SHA-256.
+- python-dotenv 1.0.1 para cargar las variables de entorno, según requirements.txt.
+- SHA-256 para verificar la integridad.
+- Windows / Linux.
+- Visual Studio Code y Wireshark como herramientas opcionales.
+
+## Seguridad
+
+- Cifrado del contenido y sus metadatos mediante AES-256-GCM.
+- Protección de la clave AES mediante RSA-OAEP con SHA-256.
+- Verificación de la etiqueta GCM y del hash SHA-256 antes de guardar el archivo final.
+- Control de acceso simulado en la interfaz y simulación biométrica previa al envío en terminal.
+- Eliminación automática de copias temporales cifradas.
+- Confirmación cifrada del receptor después de guardar el archivo y limpiar sus temporales.
+- Claves RSA generadas localmente: no se incluyen claves ni credenciales reales en el repositorio.
+
+La simulación biométrica no autentica una identidad real ni al emisor remoto. El borrado de temporales es lógico y no constituye un borrado forense. El archivo final recibido se conserva, sin caducidad automática.
+
+## Requisitos
+
+### Hardware
+
+- Un PC o laptop para una prueba en localhost.
+- Dos PC o laptops para una prueba entre dispositivos.
+- Un router o punto de acceso WiFi para la prueba en LAN.
+- Adaptador o tarjeta WiFi en cada equipo, según disponibilidad.
+- Se recomiendan 2 GB de RAM y 500 MB libres, además del espacio para los archivos recibidos.
+
+El sensor de huella, controlador, cables y fuente de alimentación del diseño original corresponden a una futura integración biométrica real; no son necesarios para ejecutar este prototipo.
+
+### Software
+
+- Windows 11 o Linux con un entorno gráfico para abrir el frontend.
+- Python 3.10 o superior; recomendado Python 3.12 de 64 bits.
+- pip y venv.
+- Tkinter, normalmente incluido en Python para Windows. En Linux puede requerir instalar el paquete correspondiente a la versión de Python utilizada.
+- Git para clonar el repositorio.
+- Dependencias indicadas en requirements.txt.
+- Visual Studio Code y Wireshark, opcionales.
+
+No se requiere base de datos ni servidor web. El puerto predeterminado es TCP 5001. El límite por archivo es 20 MiB, configurable entre 1 y 100 MiB.
+
 ## Instalar en cada laptop
 Descomprime en una carpeta privada y con permiso de escritura, fuera de carpetas sincronizadas. Usa Python 3.12 de 64 bits, con Tk. Se necesita Internet para instalar paquetes o una colección local de ruedas compatibles. Durante el uso bastan los dos equipos y una LAN. Usa Windows con escritorio o Linux con sesión gráfica. Los archivos recibidos pueden requerir hasta 100 MiB cada uno; reserva espacio para el original, un temporal y el destino. El contenido se procesa en memoria.
 

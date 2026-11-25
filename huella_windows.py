@@ -1,62 +1,96 @@
-"""Verificación de la huella de la cuenta interactiva mediante Windows Biometric Framework."""
+"""Identificación con el lector de Windows y comprobación de la cuenta local."""
 import ctypes as ct
 from ctypes import wintypes as wt
 import threading
 
+DWORD = ct.c_uint32
+HRESULT = ct.c_int32
+PUNTERO = ct.c_void_p
+PDWORD = ct.POINTER(DWORD)
+SID_MAX = 68
+TIPO_SID = 3
 
-def verificar():
-    bio = ct.WinDLL("winbio.dll")
-    adv = ct.WinDLL("advapi32.dll", use_last_error=True)
+ERRORES_LECTURA = {
+    0x80098003: "Windows no reconoció una huella registrada para este lector.",
+    0x80098004: "La lectura se canceló o se agotó el tiempo. Vuelve a intentarlo.",
+    0x80098005: "Windows no encontró una coincidencia para la huella.",
+    0x80098008: "El lector no pudo capturar bien la huella. Vuelve a colocar el dedo.",
+}
+
+
+class IdentidadBiometrica(ct.Structure):
+    # Tamaño y desplazamientos de WINBIO_IDENTITY cuando Value contiene AccountSid.
+    _fields_ = [("tipo", DWORD), ("longitud", DWORD), ("datos", ct.c_ubyte * SID_MAX)]
+
+
+def _api(dll, nombre, resultado, *argumentos):
+    funcion = getattr(dll, nombre)
+    funcion.restype = resultado
+    funcion.argtypes = argumentos
+    return funcion
+
+
+def _sid_de_la_cuenta():
+    advapi = ct.WinDLL("advapi32.dll", use_last_error=True)
     kernel = ct.WinDLL("kernel32.dll", use_last_error=True)
-
-    def api(dll, nombre, tipo, *args):
-        funcion = getattr(dll, nombre)
-        funcion.restype, funcion.argtypes = tipo, args
-        return funcion
-
-    puntero = ct.c_void_p
-    ulong = wt.DWORD
-    p32 = ct.POINTER(ulong)
-    actual = api(kernel,"GetCurrentProcess",wt.HANDLE)
-    cerrar = api(kernel,"CloseHandle",wt.BOOL,wt.HANDLE)
-    abrir_token = api(adv,"OpenProcessToken",wt.BOOL,wt.HANDLE,ulong,ct.POINTER(wt.HANDLE))
-    info = api(adv,"GetTokenInformation",wt.BOOL,wt.HANDLE,ct.c_int,puntero,ulong,p32)
-    longitud = api(adv,"GetLengthSid",ulong,puntero)
+    actual = _api(kernel, "GetCurrentProcess", wt.HANDLE)
+    cerrar = _api(kernel, "CloseHandle", wt.BOOL, wt.HANDLE)
+    abrir = _api(advapi, "OpenProcessToken", wt.BOOL, wt.HANDLE, DWORD, ct.POINTER(wt.HANDLE))
+    info = _api(advapi, "GetTokenInformation", wt.BOOL, wt.HANDLE, ct.c_int, PUNTERO, DWORD, PDWORD)
+    longitud = _api(advapi, "GetLengthSid", DWORD, PUNTERO)
     token = wt.HANDLE()
-    if not abrir_token(actual(), 8, ct.byref(token)):  # TOKEN_QUERY
+    if not abrir(actual(), 8, ct.byref(token)):  # TOKEN_QUERY
         raise ct.WinError(ct.get_last_error())
     try:
-        size = ulong()
+        size = DWORD()
         info(token, 1, None, 0, ct.byref(size))  # TokenUser
+        if not size.value:
+            raise ct.WinError(ct.get_last_error())
         buffer = ct.create_string_buffer(size.value)
         if not info(token, 1, buffer, size, ct.byref(size)):
             raise ct.WinError(ct.get_last_error())
-        sid = puntero.from_buffer(buffer).value
-        largo = longitud(sid)
-        if not 0 < largo <= 68:
-            raise ValueError("El SID de la cuenta no es válido.")
-        class Identidad(ct.Structure):
-            _fields_ = [("tipo",ulong),("longitud",ulong),("sid",ct.c_ubyte*68)]
-        identidad = Identidad(3,largo)
-        ct.memmove(identidad.sid,sid,largo)
+        sid = PUNTERO.from_buffer(buffer).value
+        largo = longitud(sid) if sid else 0
+        if not 8 <= largo <= SID_MAX:
+            raise ValueError("Windows no devolvió un SID válido para esta cuenta.")
+        return ct.string_at(sid, largo)
     finally:
         cerrar(token)
-    abrir = api(bio,"WinBioOpenSession",ct.c_long,ulong,ulong,ulong,puntero,ct.c_size_t,puntero,p32)
-    validar = api(bio,"WinBioVerify",ct.c_long,ulong,puntero,ct.c_ubyte,p32,ct.POINTER(ct.c_ubyte),p32)
-    cancelar = api(bio,"WinBioCancel",ct.c_long,ulong)
-    fin = api(bio,"WinBioCloseSession",ct.c_long,ulong)
-    sesion, unidad, razon, match = ulong(), ulong(), ulong(), ct.c_ubyte()
-    # Huella, grupo del sistema, opciones por defecto, WINBIO_DB_DEFAULT.
-    hr = abrir(8,1,0,None,0,puntero(1),ct.byref(sesion))
+
+
+def _validar_identidad(identidad, sid_actual):
+    if (identidad.tipo != TIPO_SID or identidad.longitud != len(sid_actual)
+            or bytes(identidad.datos[:identidad.longitud]) != sid_actual):
+        raise ValueError("La huella identificada no pertenece a la cuenta de Windows que abrió Bóveda WiFi.")
+
+
+def verificar():
+    sid_actual = _sid_de_la_cuenta()
+    bio = ct.WinDLL("winbio.dll")
+    abrir = _api(bio, "WinBioOpenSession", HRESULT, DWORD, DWORD, DWORD, PUNTERO, ct.c_size_t, PUNTERO, PDWORD)
+    identificar = _api(bio, "WinBioIdentify", HRESULT, DWORD, PDWORD,
+                       ct.POINTER(IdentidadBiometrica), ct.POINTER(ct.c_ubyte), PDWORD)
+    cancelar = _api(bio, "WinBioCancel", HRESULT, DWORD)
+    cerrar = _api(bio, "WinBioCloseSession", HRESULT, DWORD)
+    sesion, unidad, rechazo = DWORD(), DWORD(), DWORD()
+    identidad, dedo = IdentidadBiometrica(), ct.c_ubyte()
+    # Huella, grupo del sistema, opciones por defecto y base predeterminada del sistema.
+    hr = abrir(8, 1, 0, None, 0, None, ct.byref(sesion))
     if hr:
-        raise ValueError(f"Lector WBF no disponible (0x{hr & 0xffffffff:08X}).")
-    timer = threading.Timer(45,cancelar,args=(sesion,))
+        raise ValueError(f"Lector biométrico de Windows no disponible (0x{hr & 0xffffffff:08X}).")
+    timer = threading.Timer(45, cancelar, args=(sesion,))
     try:
         timer.start()
-        hr = validar(sesion,ct.byref(identidad),255,ct.byref(unidad),ct.byref(match),ct.byref(razon))
-        if hr or not match.value:
-            raise ValueError(f"Huella sin verificar (0x{hr & 0xffffffff:08X}).")
+        hr = identificar(sesion, ct.byref(unidad), ct.byref(identidad), ct.byref(dedo), ct.byref(rechazo))
+        if hr:
+            codigo = hr & 0xffffffff
+            mensaje = ERRORES_LECTURA.get(codigo, "Windows no pudo completar la identificación.")
+            if codigo == 0x80098008:
+                mensaje += f" Detalle de captura: {rechazo.value}."
+            raise ValueError(f"{mensaje} (0x{codigo:08X})")
+        _validar_identidad(identidad, sid_actual)
     finally:
         timer.cancel()
-        timer.join()
-        fin(sesion)
+        if timer.ident is not None:
+            timer.join()
+        cerrar(sesion)
